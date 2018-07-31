@@ -10,6 +10,8 @@
 package com.yahoo.egads.utilities;
 
 import com.yahoo.egads.data.TimeSeries;
+
+import java.io.Reader;
 import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.io.BufferedReader;
@@ -21,8 +23,15 @@ public class FileUtils {
     
     // Creates a time-series from a file.
     public static ArrayList<TimeSeries> createTimeSeries(String csv_file, Properties config) {
+       try {
+           return createTimeSeriesFromInputReader(new FileReader(csv_file), config);
+       } catch (Exception ex) {
+           return null;
+       }
+    }
+
+    public static ArrayList<TimeSeries> createTimeSeriesFromInputReader(Reader inputReader, Properties config) {
         // Input file which needs to be parsed
-        String fileToParse = csv_file;
         BufferedReader fileReader = null;
         ArrayList<TimeSeries> output = new ArrayList<TimeSeries>();
 
@@ -33,7 +42,7 @@ public class FileUtils {
         Integer aggr = 1;
         boolean fillMissing = false;
         if (config.getProperty("FILL_MISSING") != null && config.getProperty("FILL_MISSING").equals("1")) {
-        	fillMissing = true;
+            fillMissing = true;
         }
         if (config.getProperty("AGGREGATION") != null) {
             aggr = new Integer(config.getProperty("AGGREGATION"));
@@ -41,7 +50,7 @@ public class FileUtils {
         try {
             String line = "";
             // Create the file reader.
-            fileReader = new BufferedReader(new FileReader(fileToParse));
+            fileReader = new BufferedReader(inputReader);
 
             // Read the file line by line
             boolean firstLine = true;
@@ -49,8 +58,8 @@ public class FileUtils {
                 // Get all tokens available in line.
                 String[] tokens = line.split(delimiter);
                 Long curTimestamp = null;
-                
-                // Check for the case where there is more than one line preceding the data 
+
+                // Check for the case where there is more than one line preceding the data
                 if (firstLine == true) {
                     if (!isNumeric(tokens[0]) && tokens[0].equals("timestamp") == false) {
                         continue;
@@ -63,7 +72,7 @@ public class FileUtils {
                     // Assume that the first line contains the column names.
                     if (firstLine) {
                         TimeSeries ts = new TimeSeries();
-                        ts.meta.fileName = csv_file;
+                        //ts.meta.fileName = csv_file;
                         output.add(ts);
                         if (isNumeric(tokens[i]) == false) { // Just in case there's a numeric column heading
                             ts.meta.name = tokens[i];
@@ -77,7 +86,7 @@ public class FileUtils {
                         if (interval != null && prev != null && interval > 0 && fillMissing == true) {
                             if ((curTimestamp - prev) != interval) {
                                 int missingValues = (int) ((curTimestamp - prev) / interval);
-                                
+
                                 Long curTimestampToFill = prev + interval;
                                 for (int j = (missingValues - 1); j > 0; j--) {
                                     Float valToFill =  new Float(tokens[i]);
@@ -93,7 +102,7 @@ public class FileUtils {
                         if (interval == null && prev != null) {
                             interval = curTimestamp - new Long(prev);
                         }
-                        
+
                         output.get(i - 1).append(curTimestamp,
                                 new Float(tokens[i]));
                     }
@@ -121,6 +130,8 @@ public class FileUtils {
         }
         return output;
     }
+
+
         
     // Checks if the string is numeric.
     public static boolean isNumeric(String str) {  
